@@ -469,11 +469,9 @@ function renderGroups() {
             <div class="group-player-list">${ids.map((id, i) => {
                 const p = playerMap[id];
                 const name = p ? p.name : `ID: ${id}`;
-                const odds = p && p.odds < 999999 ? `+${p.odds}` : '';
                 return `<div class="group-player">
                     <span class="gp-num">${i + 1}</span>
                     <span class="gp-name">${name}</span>
-                    ${odds ? `<span class="gp-odds">${odds}</span>` : ''}
                     <button class="gp-remove" onclick="removeFromGroup('${id}', ${g})" title="Remove">&times;</button>
                 </div>`;
             }).join('')}</div>
@@ -552,6 +550,32 @@ function clearAllGroups() {
     groups = { 1: [], 2: [], 3: [], 4: [], 5: [] };
     saveGroups();
     renderGroups();
+}
+
+function exportGroupsCSV() {
+    // Build columns: one per group
+    const cols = [];
+    for (let g = 1; g <= 5; g++) {
+        cols.push((groups[g] || []).map(id => {
+            const p = playerMap[id];
+            return p ? p.name : '';
+        }));
+    }
+    const maxRows = Math.max(...cols.map(c => c.length));
+    const lines = ['Group 1,Group 2,Group 3,Group 4,Group 5'];
+    for (let r = 0; r < maxRows; r++) {
+        lines.push(cols.map(col => col[r] || '').join(','));
+    }
+    const csv = lines.join('\n');
+
+    // Download as file
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'masters-groups.csv';
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 // =============================================================

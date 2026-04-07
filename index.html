@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masters Sweepstake</title>
-    <link rel="stylesheet" href="css/style.css?v=5">
+    <link rel="stylesheet" href="css/style.css?v=6">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -148,6 +148,9 @@
         <section id="tab-groups" class="tab-content">
             <div class="groups-header">
                 <h2>Player Groups</h2>
+                <div class="groups-actions">
+                    <button class="btn btn-export" id="exportGroupsBtn" onclick="exportGroupsCSV()" title="Download groups as CSV">Download CSV</button>
+                </div>
                 <div class="groups-actions admin-only">
                     <button class="btn btn-auto" id="autoGroupBtn" title="Auto-assign players into 5 groups based on betting odds">Re-assign by Odds</button>
                     <button class="btn btn-clear" id="clearGroupBtn">Clear All Groups</button>
@@ -249,6 +252,6 @@
         <p>Data sourced from ESPN | <span id="footerUpdated">--</span></p>
     </footer>
 
-    <script src="js/app.js?v=10"></script>
+    <script src="js/app.js?v=11"></script>
 </body>
 </html>

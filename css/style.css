@@ -150,6 +150,8 @@ body {
 .btn-auto:hover { opacity: 0.9; }
 .btn-clear { background: var(--red-500); color: white; }
 .btn-clear:hover { opacity: 0.9; }
+.btn-export { background: var(--masters-green); color: white; }
+.btn-export:hover { background: var(--masters-green-deep); }
 .btn-cancel { background: var(--gray-300); color: var(--gray-700); }
 .btn-small { padding: 5px 10px; font-size: 11px; background: var(--gray-200); color: var(--gray-700); }
 .btn-small:hover { background: var(--gray-300); }
