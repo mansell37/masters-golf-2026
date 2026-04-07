@@ -239,9 +239,11 @@ async function fetchESPN() {
         espnData = await r.json();
         buildPlayerMap();
 
-        // Auto-populate groups on first load when they're empty
+        // Auto-populate groups on first load, or when saved groups are stale (different tournament)
         const totalAssigned = Object.values(groups).reduce((s, arr) => s + arr.length, 0);
-        if (totalAssigned === 0 && Object.keys(playerMap).length > 0) {
+        const validAssigned = Object.values(groups).reduce((s, arr) => s + arr.filter(id => playerMap[id]).length, 0);
+        const groupsAreStale = totalAssigned > 0 && validAssigned / totalAssigned < 0.5;
+        if ((totalAssigned === 0 || groupsAreStale) && Object.keys(playerMap).length > 0) {
             autoAssignGroups(true);
         }
 
@@ -529,15 +531,9 @@ function autoAssignGroups(silent) {
     const allPlayers = Object.values(playerMap).sort((a, b) => a.odds - b.odds);
     const n = allPlayers.length;
 
-    // Ascending group sizes: G1 smallest, G5 largest
-    // Ratios  ~8% / 13% / 19% / 27% / 33%  (each group larger than the previous)
-    const sizes = [
-        Math.round(n * 0.08),
-        Math.round(n * 0.13),
-        Math.round(n * 0.19),
-        Math.round(n * 0.27),
-    ];
-    sizes.push(n - sizes[0] - sizes[1] - sizes[2] - sizes[3]);
+    // Fixed group sizes: G1=6, G2=8, G3=10, G4=12, G5=rest
+    const sizes = [6, 8, 10, 12];
+    sizes.push(Math.max(0, n - 36));
 
     groups = { 1: [], 2: [], 3: [], 4: [], 5: [] };
     let idx = 0;
@@ -1175,6 +1171,11 @@ function toggleAdmin() {
     adminMode = !adminMode;
     document.body.classList.toggle('admin-mode', adminMode);
     document.getElementById('adminToggle').classList.toggle('active', adminMode);
+    // Show Enter Team tab only in admin mode
+    const enterBtn = document.querySelector('.tab-btn[data-tab="enter"]');
+    if (enterBtn) enterBtn.style.display = adminMode ? '' : 'none';
+    // Redirect away from Enter tab when leaving admin
+    if (!adminMode && activeTab === 'enter') switchTab('sweep');
     renderCurrentTab();
 }
 
@@ -1195,7 +1196,9 @@ function stopAutoRefresh() {
 document.addEventListener('DOMContentLoaded', async () => {
     await loadInitialState();
 
-    // Tab navigation
+    // Tab navigation — Enter Team is admin-only; hide it by default
+    const enterTabBtn = document.querySelector('.tab-btn[data-tab="enter"]');
+    if (enterTabBtn) enterTabBtn.style.display = 'none';
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
