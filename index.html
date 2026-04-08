@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masters Sweepstake</title>
-    <link rel="stylesheet" href="css/style.css?v=8">
+    <link rel="stylesheet" href="css/style.css?v=9">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -153,6 +153,11 @@
                 <div class="entries-panel">
                     <h2>Submitted Teams <span id="teamCount" class="badge">0</span></h2>
                     <div id="entriesList" class="entries-list"></div>
+                    <div class="admin-only bonus-admin-panel" style="margin-top:20px">
+                        <h3 class="bonus-admin-title">&#9733; Bonus Question Answers</h3>
+                        <p class="bonus-admin-hint">Enter correct answers once known. Scores update instantly.</p>
+                        <div id="bonusAdminForm"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -179,7 +184,7 @@
                         <li>If exactly <strong>2 players miss the cut</strong>, your team moves to the <strong>plate competition</strong> and only your best 3 remaining scores count</li>
                         <li>If <strong>3 or more players miss the cut</strong>, your team is <strong>eliminated</strong> from the competition</li>
                         <li>Lowest score versus par wins</li>
-                        <li>If all 5 make the cut - <strong>reduce your score by 3</strong></li>
+                        <li>If all 5 make the cut - <strong>reduce your score by 1</strong></li>
                         <li>If one of your players is leading after 18, 36 or 54 holes - <strong>reduce your score by 1</strong> (per instance)</li>
                         <li>If one of your players is the overall winner - <strong>reduce your score by 2</strong></li>
                         <li>Each bonus point question correct - <strong>reduce your score by 1</strong></li>
@@ -264,6 +269,23 @@
 
     </main>
 
+    <!-- Admin password modal -->
+    <div class="modal-overlay" id="adminPwModal">
+        <div class="modal modal-sm">
+            <h3>&#128274; Admin Access</h3>
+            <p class="modal-hint">Enter the admin password to continue.</p>
+            <div class="form-row" style="margin-top:12px">
+                <input type="password" id="adminPwInput" placeholder="Password" style="width:100%"
+                    onkeydown="if(event.key==='Enter') confirmAdminPassword()">
+            </div>
+            <p id="adminPwError" style="color:var(--red-500);font-size:12px;margin-top:6px;display:none">Incorrect password.</p>
+            <div class="modal-actions">
+                <button class="btn btn-submit" onclick="confirmAdminPassword()">Enter</button>
+                <button class="btn btn-cancel" onclick="closeAdminModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Admin modal for bonus questions -->
     <div class="modal-overlay" id="bonusModal">
         <div class="modal">
@@ -281,6 +303,6 @@
         <p>Data sourced from ESPN | <span id="footerUpdated">--</span></p>
     </footer>
 
-    <script src="js/app.js?v=14"></script>
+    <script src="js/app.js?v=15"></script>
 </body>
 </html>

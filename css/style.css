@@ -703,6 +703,50 @@ body.admin-mode .group-player:hover .gp-remove { opacity: 1; }
 }
 
 /* ========================================
+   BONUS POINT COLUMN STYLING
+   ======================================== */
+.bp-correct { color: var(--green-700) !important; font-weight: 700; background: var(--green-50); }
+.bp-wrong { color: var(--red-600) !important; }
+.bp-strikethrough { text-decoration: line-through; font-size: 11px; }
+.bp-ldr { color: var(--masters-gold-deep) !important; font-weight: 700; }
+.col-bp-cut { background: rgba(5,150,105,0.05); }
+.col-bp-ldr { background: rgba(212,175,55,0.07); }
+
+/* ========================================
+   BONUS ADMIN PANEL (Enter Team tab)
+   ======================================== */
+.bonus-admin-panel {
+    background: #fffdf7;
+    border: 1px solid #efe5cd;
+    border-radius: var(--radius);
+    padding: 16px;
+}
+.bonus-admin-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--masters-green-deep);
+    margin-bottom: 4px;
+}
+.bonus-admin-hint { font-size: 12px; color: var(--gray-500); margin-bottom: 12px; }
+.bonus-admin-row { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-100); }
+.bonus-admin-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.ba-question { font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+.ba-answer-row { display: flex; gap: 8px; align-items: center; }
+.ba-input {
+    flex: 1; padding: 7px 10px; border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm); font-family: inherit; font-size: 13px;
+}
+.ba-input:focus { outline: none; border-color: var(--masters-green); box-shadow: 0 0 0 2px rgba(17,87,64,0.15); }
+.btn-save-ans { background: var(--masters-green); color: white; padding: 7px 14px; font-size: 12px; }
+.btn-save-ans:hover { background: var(--masters-green-deep); }
+.ba-set { font-size: 11px; color: var(--green-700); margin-top: 4px; }
+
+/* ========================================
+   ADMIN PASSWORD MODAL
+   ======================================== */
+.modal-sm { max-width: 360px; }
+
+/* ========================================
    GROUPS LOCKED BADGE
    ======================================== */
 .groups-locked-badge {

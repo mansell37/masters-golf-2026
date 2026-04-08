@@ -357,7 +357,7 @@ function switchTab(tabId) {
 function renderCurrentTab() {
     switch (activeTab) {
         case 'sweep':     renderSweepLeaderboard(); break;
-        case 'enter':     renderEntryForm(); renderEntriesList(); break;
+        case 'enter':     renderEntryForm(); renderEntriesList(); renderBonusAdminPanel(); break;
         case 'groups':    renderGroups(); break;
         case 'rules':     renderBonusDisplay(); break;
         case 'golf':      renderGolfLeaderboard(); break;
@@ -687,6 +687,32 @@ function renderEntriesList() {
 // =============================================================
 // BONUS QUESTIONS
 // =============================================================
+function renderBonusAdminPanel() {
+    const el = document.getElementById('bonusAdminForm');
+    if (!el) return;
+    el.innerHTML = bonusQuestions.map((bq, i) => `
+        <div class="bonus-admin-row">
+            <div class="ba-question">Q${i + 1}: ${bq.question}</div>
+            <div class="ba-answer-row">
+                <input type="text" class="ba-input" id="baAns${i}" value="${bq.correctAnswer || ''}" placeholder="Enter correct answer...">
+                <button class="btn btn-save-ans" onclick="saveSingleBonusAnswer(${i})">Save</button>
+            </div>
+            ${bq.correctAnswer ? `<div class="ba-set">Answer set: <strong>${bq.correctAnswer}</strong></div>` : ''}
+        </div>
+    `).join('');
+}
+
+function saveSingleBonusAnswer(idx) {
+    const val = (document.getElementById(`baAns${idx}`)?.value || '').trim();
+    if (bonusQuestions[idx]) {
+        bonusQuestions[idx].correctAnswer = val;
+        saveBonus();
+        renderBonusAdminPanel();
+        renderBonusDisplay();
+        renderSweepLeaderboard();
+    }
+}
+
 function renderBonusDisplay() {
     const el = document.getElementById('bonusQuestionsDisplay');
     if (!bonusQuestions.length) {
@@ -879,8 +905,8 @@ function calculateTeamScore(entry) {
         result.rawTotal = sorted.slice(0, 4).reduce((sum, p) => sum + p.score, 0);
     }
 
-    // All-5-made-cut bonus (-3)
-    const cutBonus = result.competitionType === 'main' && result.allMadeCut ? -3 : 0;
+    // All-5-made-cut bonus (-1)
+    const cutBonus = result.competitionType === 'main' && result.allMadeCut ? -1 : 0;
 
     // Leader bonuses: check R1, R2, R3
     const pickSet = new Set(entry.picks);
@@ -923,7 +949,7 @@ function calculateTeamScore(entry) {
 // SWEEPSTAKE LEADERBOARD
 // =============================================================
 function getSweepTableColSpan() {
-    return 19 + bonusQuestions.length + (adminMode ? 1 : 0);
+    return 21 + bonusQuestions.length + (adminMode ? 1 : 0);
 }
 
 function getSweepHeaderHtml() {
@@ -936,7 +962,9 @@ function getSweepHeaderHtml() {
         <th class="g3-head col-player-pick">Group 3</th><th class="g3-head col-sc">Sc</th><th class="g3-head col-thru">Thru</th>
         <th class="g4-head col-player-pick">Group 4</th><th class="g4-head col-sc">Sc</th><th class="g4-head col-thru">Thru</th>
         <th class="g5-head col-player-pick">Group 5</th><th class="g5-head col-sc">Sc</th><th class="g5-head col-thru">Thru</th>
-        ${bonusQuestions.map((_, i) => `<th class="col-bp">BP${i + 1}</th>`).join('')}
+        ${bonusQuestions.map((bq, i) => `<th class="col-bp" title="${bq.question}">BQ${i + 1}</th>`).join('')}
+        <th class="col-bp col-bp-cut" title="All 5 players made the cut (-1)">Cut</th>
+        <th class="col-bp col-bp-ldr" title="Round leader after R1/R2/R3 (-1 each) + Tournament winner (-2)">Ldr/Win</th>
         <th class="col-bp">BP Tot</th>
         <th class="col-total">Total</th>
         ${adminCol}
@@ -980,10 +1008,23 @@ function renderCompetitionTable(thead, tbody, scoredRows, emptyMessage, rowClass
         const groupCells = buildGroupCells(entry, result);
 
         const bpCells = bonusQuestions.map((bq, i) => {
-            const ans = entry.bonusAnswers?.[i] || '';
-            const correct = bq.correctAnswer && ans.trim().toLowerCase() === bq.correctAnswer.trim().toLowerCase();
-            return `<td class="col-bp">${correct ? '<span style="color:var(--green-600);font-weight:700">Yes</span>' : (ans || '--')}</td>`;
+            const ans = (entry.bonusAnswers?.[i] || '').trim();
+            const answered = ans !== '';
+            const correct = bq.correctAnswer && answered && ans.toLowerCase() === bq.correctAnswer.trim().toLowerCase();
+            const wrong = bq.correctAnswer && answered && !correct;
+            if (correct) return `<td class="col-bp bp-correct" title="Correct!">&#10003;</td>`;
+            if (wrong)   return `<td class="col-bp bp-wrong" title="Incorrect"><span class="bp-strikethrough">${ans}</span></td>`;
+            return `<td class="col-bp">${answered ? ans : '--'}</td>`;
         }).join('');
+
+        const cutBonusVal = result.competitionType === 'main' && result.allMadeCut ? -1 : 0;
+        const ldrWinVal = (-1 * result.leaderBonuses) + (result.winnerBonus ? -2 : 0);
+        const cutCell = cutBonusVal !== 0
+            ? `<td class="col-bp bp-correct" title="All 5 made the cut">${cutBonusVal}</td>`
+            : `<td class="col-bp">--</td>`;
+        const ldrCell = ldrWinVal !== 0
+            ? `<td class="col-bp bp-ldr" title="${result.leaderBonuses} round leader(s)${result.winnerBonus ? ' + winner' : ''}">${ldrWinVal}</td>`
+            : `<td class="col-bp">--</td>`;
 
         const deleteCol = adminMode ? `<td><button class="delete-btn" onclick="deleteEntry('${entry.id}')">&times;</button></td>` : '';
         const rowClass = rowClassFn(pos, entry, result);
@@ -992,7 +1033,9 @@ function renderCompetitionTable(thead, tbody, scoredRows, emptyMessage, rowClass
             <td class="col-team">${entry.team} <span class="entrant">(${entry.entrant})</span></td>
             ${groupCells}
             ${bpCells}
-            <td class="col-bp" style="font-weight:700">${result.totalBonus}</td>
+            ${cutCell}
+            ${ldrCell}
+            <td class="col-bp" style="font-weight:700">${fmtScoreNum(result.totalBonus)}</td>
             <td class="col-total ${scoreClass(gt.toString())}">${fmtScoreNum(gt)}</td>
             ${deleteCol}
         </tr>`;
@@ -1018,9 +1061,13 @@ function renderEliminatedTeams(eliminatedRows) {
         .map(({ entry, result }) => {
             const groupCells = buildGroupCells(entry, result);
             const bpCells = bonusQuestions.map((bq, i) => {
-                const ans = entry.bonusAnswers?.[i] || '';
-                const correct = bq.correctAnswer && ans.trim().toLowerCase() === bq.correctAnswer.trim().toLowerCase();
-                return `<td class="col-bp">${correct ? '<span style="color:var(--green-600);font-weight:700">Yes</span>' : (ans || '--')}</td>`;
+                const ans = (entry.bonusAnswers?.[i] || '').trim();
+                const answered = ans !== '';
+                const correct = bq.correctAnswer && answered && ans.toLowerCase() === bq.correctAnswer.trim().toLowerCase();
+                const wrong = bq.correctAnswer && answered && !correct;
+                if (correct) return `<td class="col-bp bp-correct">&#10003;</td>`;
+                if (wrong)   return `<td class="col-bp bp-wrong"><span class="bp-strikethrough">${ans}</span></td>`;
+                return `<td class="col-bp">${answered ? ans : '--'}</td>`;
             }).join('');
             const deleteCol = adminMode ? `<td><button class="delete-btn" onclick="deleteEntry('${entry.id}')">&times;</button></td>` : '';
 
@@ -1029,6 +1076,8 @@ function renderEliminatedTeams(eliminatedRows) {
                 <td class="col-team">${entry.team} <span class="entrant">(${entry.entrant})</span></td>
                 ${groupCells}
                 ${bpCells}
+                <td class="col-bp">--</td>
+                <td class="col-bp">--</td>
                 <td class="col-bp">${result.cutCount} CUT</td>
                 <td class="col-total score-cut">CUT</td>
                 ${deleteCol}
@@ -1493,14 +1542,43 @@ function renderAnalytics() {
 // =============================================================
 // ADMIN MODE
 // =============================================================
+const ADMIN_PASSWORD = 'masters';
+
 function toggleAdmin() {
-    adminMode = !adminMode;
+    if (!adminMode) {
+        // Show password modal before activating
+        document.getElementById('adminPwInput').value = '';
+        document.getElementById('adminPwError').style.display = 'none';
+        document.getElementById('adminPwModal').classList.add('open');
+        setTimeout(() => document.getElementById('adminPwInput').focus(), 100);
+    } else {
+        // Deactivate immediately — no password needed to exit
+        setAdminMode(false);
+    }
+}
+
+function confirmAdminPassword() {
+    const val = document.getElementById('adminPwInput').value;
+    if (val === ADMIN_PASSWORD) {
+        document.getElementById('adminPwModal').classList.remove('open');
+        setAdminMode(true);
+    } else {
+        document.getElementById('adminPwError').style.display = 'block';
+        document.getElementById('adminPwInput').value = '';
+        document.getElementById('adminPwInput').focus();
+    }
+}
+
+function closeAdminModal() {
+    document.getElementById('adminPwModal').classList.remove('open');
+}
+
+function setAdminMode(on) {
+    adminMode = on;
     document.body.classList.toggle('admin-mode', adminMode);
     document.getElementById('adminToggle').classList.toggle('active', adminMode);
-    // Show Enter Team tab only in admin mode
     const enterBtn = document.querySelector('.tab-btn[data-tab="enter"]');
     if (enterBtn) enterBtn.style.display = adminMode ? '' : 'none';
-    // Redirect away from Enter tab when leaving admin
     if (!adminMode && activeTab === 'enter') switchTab('sweep');
     renderCurrentTab();
 }
