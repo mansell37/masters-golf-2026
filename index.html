@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masters Sweepstake</title>
-    <link rel="stylesheet" href="css/style.css?v=7">
+    <link rel="stylesheet" href="css/style.css?v=8">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -16,12 +16,12 @@
                 <span class="logo-text">Masters Sweepstake</span>
             </div>
             <nav class="nav-tabs" id="navTabs">
-                <button class="tab-btn active" data-tab="sweep">Sweepstake</button>
+                <button class="tab-btn active" data-tab="sweep">Leaderboards</button>
                 <button class="tab-btn" data-tab="enter">Enter Team</button>
-                <button class="tab-btn" data-tab="groups">Player Groups</button>
-                <button class="tab-btn" data-tab="rules">Rules</button>
-                <button class="tab-btn" data-tab="golf">Golf Leaderboard</button>
-                <button class="tab-btn" data-tab="detail">Details</button>
+                <button class="tab-btn" data-tab="groups">Groups</button>
+                <button class="tab-btn" data-tab="rules">Rules &amp; Prizes</button>
+                <button class="tab-btn" data-tab="golf">Golf</button>
+                <button class="tab-btn" data-tab="detail">Selections</button>
                 <button class="tab-btn" data-tab="analytics">Analytics</button>
             </nav>
             <div class="header-actions">
@@ -53,7 +53,7 @@
         <!-- ============ SWEEPSTAKE TAB ============ -->
         <section id="tab-sweep" class="tab-content active">
             <div class="sweep-header">
-                <h2 id="sweepTitle">NAB Sweepstake Leaderboard</h2>
+                <h2 id="sweepTitle">Sweepstake Leaderboards</h2>
                 <div class="sweep-meta">
                     <span id="sweepEntryCount">0 entries</span>
                     <span class="sep">|</span>
@@ -160,23 +160,12 @@
         <!-- ============ GROUPS TAB ============ -->
         <section id="tab-groups" class="tab-content">
             <div class="groups-header">
-                <h2>Player Groups</h2>
+                <h2>Player Groups <span class="groups-locked-badge">&#128274; Locked</span></h2>
                 <div class="groups-actions">
                     <button class="btn btn-export" id="exportGroupsBtn" onclick="exportGroupsCSV()" title="Download groups as CSV">Download CSV</button>
                 </div>
-                <div class="groups-actions admin-only">
-                    <button class="btn btn-auto" id="autoGroupBtn" title="Auto-assign players into 5 groups based on betting odds">Re-assign by Odds</button>
-                    <button class="btn btn-clear" id="clearGroupBtn">Clear All Groups</button>
-                </div>
             </div>
             <div class="groups-grid" id="groupsGrid"></div>
-            <div class="unassigned-section admin-only" id="unassignedSection">
-                <h3>Unassigned Players <span id="unassignedCount" class="badge">0</span></h3>
-                <div class="unassigned-controls">
-                    <input type="text" id="unassignedSearch" placeholder="Search players...">
-                </div>
-                <div class="unassigned-list" id="unassignedList"></div>
-            </div>
         </section>
 
         <!-- ============ RULES TAB ============ -->
@@ -199,9 +188,11 @@
                 <div class="rules-card prize-card">
                     <div class="rules-card-header">PRIZES</div>
                     <ul class="rules-list">
-                        <li>Winner takes <strong>80%</strong> of prize pool</li>
-                        <li>Runner-up takes <strong>20%</strong> of prize pool</li>
-                        <li>If tie, winnings shared evenly</li>
+                        <li><strong>1st place</strong> takes <strong>60%</strong> of prize pool</li>
+                        <li><strong>2nd place</strong> takes <strong>25%</strong> of prize pool</li>
+                        <li><strong>3rd place</strong> takes <strong>10%</strong> of prize pool</li>
+                        <li><strong>Plate winner</strong> takes <strong>5%</strong> of prize pool</li>
+                        <li>If tie, winnings shared evenly between tied players</li>
                     </ul>
                 </div>
                 <div class="bonus-card">
@@ -249,7 +240,7 @@
         <!-- ============ DETAIL LEADERBOARD TAB ============ -->
         <section id="tab-detail" class="tab-content">
             <div class="detail-header">
-                <h2>Detailed Leaderboard</h2>
+                <h2>Selections &amp; Detailed Scoring</h2>
                 <div class="detail-switcher">
                     <button class="sweep-btn active" data-detail-sweep="nab">NAB Sweepstake</button>
                     <button class="sweep-btn" data-detail-sweep="bnz">BNZ Sweepstake</button>
@@ -290,6 +281,6 @@
         <p>Data sourced from ESPN | <span id="footerUpdated">--</span></p>
     </footer>
 
-    <script src="js/app.js?v=13"></script>
+    <script src="js/app.js?v=14"></script>
 </body>
 </html>

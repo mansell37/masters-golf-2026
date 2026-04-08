@@ -106,6 +106,7 @@ function normalizeEntries(data) {
         id: en.id,
         entrant: en.entrant.trim(),
         team: en.team.trim(),
+        sweep: en.sweep || 'nab',
         picks: en.picks.slice(0, 5),
         bonusAnswers: Array.isArray(en.bonusAnswers) ? en.bonusAnswers.map(a => `${a || ''}`) : [],
         createdAt: en.createdAt || Date.now(),
@@ -253,11 +254,9 @@ async function fetchESPN() {
         espnData = await r.json();
         buildPlayerMap();
 
-        // Auto-populate groups on first load, or when saved groups are stale (different tournament)
+        // Auto-populate groups only on very first load when no groups exist
         const totalAssigned = Object.values(groups).reduce((s, arr) => s + arr.length, 0);
-        const validAssigned = Object.values(groups).reduce((s, arr) => s + arr.filter(id => playerMap[id]).length, 0);
-        const groupsAreStale = totalAssigned > 0 && validAssigned / totalAssigned < 0.5;
-        if ((totalAssigned === 0 || groupsAreStale) && Object.keys(playerMap).length > 0) {
+        if (totalAssigned === 0 && Object.keys(playerMap).length > 0) {
             autoAssignGroups(true);
         }
 
@@ -489,7 +488,6 @@ function renderGroups() {
                 return `<div class="group-player">
                     <span class="gp-num">${i + 1}</span>
                     <span class="gp-name">${name}</span>
-                    <button class="gp-remove" onclick="removeFromGroup('${id}', ${g})" title="Remove">&times;</button>
                 </div>`;
             }).join('')}</div>
         </div>`;
@@ -1056,7 +1054,7 @@ function renderSweepLeaderboard() {
 
     // Update title
     const titleEl = document.getElementById('sweepTitle');
-    if (titleEl) titleEl.textContent = (activeSweep === 'nab' ? 'NAB' : 'BNZ') + ' Sweepstake Leaderboard';
+    if (titleEl) titleEl.innerHTML = `Sweepstake Leaderboards <span class="badge-sweep badge-${activeSweep}">${activeSweep.toUpperCase()}</span>`;
 
     // Filter entries by active sweep
     const sweepEntries = entries.filter(e => (e.sweep || 'nab') === activeSweep);
@@ -1543,9 +1541,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Team form
     document.getElementById('teamForm').addEventListener('submit', submitTeam);
 
-    // Groups admin
-    document.getElementById('autoGroupBtn')?.addEventListener('click', autoAssignGroups);
-    document.getElementById('clearGroupBtn')?.addEventListener('click', clearAllGroups);
+    // Groups (read-only — search still works in admin)
     document.getElementById('unassignedSearch')?.addEventListener('input', () => renderUnassigned());
 
     // Player search (golf tab)
