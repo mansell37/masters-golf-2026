@@ -1081,7 +1081,6 @@ function buildGroupCells(entry, result) {
         // Build leader badges
         const badges = [];
         if (winners.has(pid))        badges.push(`<span class="ldr-badge ldr-win" title="Tournament Winner">&#127942;</span>`);
-        else if (currentLeaders.has(pid)) badges.push(`<span class="ldr-badge ldr-now" title="Current Leader">&#9733; Leader</span>`);
         if (r1Leaders.has(pid))      badges.push(`<span class="ldr-badge ldr-r1" title="Led after Round 1">R1</span>`);
         if (r2Leaders.has(pid))      badges.push(`<span class="ldr-badge ldr-r2" title="Led after Round 2">R2</span>`);
         if (r3Leaders.has(pid))      badges.push(`<span class="ldr-badge ldr-r3" title="Led after Round 3">R3</span>`);
