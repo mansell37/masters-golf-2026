@@ -174,17 +174,38 @@ async function loadStateFromServer() {
     if (!response.ok) throw new Error(`State load failed (${response.status})`);
     const payload = await response.json();
 
+    // Only overwrite local groups if server has a non-empty valid set
     if (validateGroups(payload.groups)) {
-        groups = payload.groups;
-        save(STORAGE.groups, groups);
+        const serverGroupCount = Object.values(payload.groups).reduce((s, a) => s + a.length, 0);
+        const localGroupCount  = Object.values(groups).reduce((s, a) => s + a.length, 0);
+        if (serverGroupCount > 0 || localGroupCount === 0) {
+            groups = payload.groups;
+            save(STORAGE.groups, groups);
+        }
     }
+
+    // Only overwrite local entries if server has entries, OR local is already empty
     if (validateEntries(payload.entries)) {
-        entries = normalizeEntries(payload.entries);
-        save(STORAGE.entries, entries);
+        if (payload.entries.length > 0 || entries.length === 0) {
+            entries = normalizeEntries(payload.entries);
+            save(STORAGE.entries, entries);
+        }
     }
+
+    // Only overwrite bonus questions if server has them, OR local is empty
     if (validateBonusQuestions(payload.bonus)) {
-        bonusQuestions = payload.bonus;
-        save(STORAGE.bonus, bonusQuestions);
+        if (payload.bonus.length > 0 || bonusQuestions.length === 0) {
+            bonusQuestions = payload.bonus;
+            save(STORAGE.bonus, bonusQuestions);
+        }
+    }
+
+    // Always push local state back to server if server was empty (re-sync after redeploy)
+    const serverIsEmpty = (!payload.entries || payload.entries.length === 0) &&
+                          (!payload.groups  || Object.values(payload.groups).every(a => a.length === 0));
+    if (serverIsEmpty && (entries.length > 0 || Object.values(groups).some(a => a.length > 0))) {
+        console.log('Server state was empty — re-syncing local data to server...');
+        await persistStateToServer({ groups, entries, bonus: bonusQuestions });
     }
 }
 
