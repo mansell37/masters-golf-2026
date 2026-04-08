@@ -348,6 +348,18 @@ function matchOdds(espnName) {
 function getEvent()       { return espnData?.events?.[0]; }
 function getCompetition() { return getEvent()?.competitions?.[0]; }
 function getTournamentState() { return getCompetition()?.status?.type?.state || 'pre'; }
+function isCutMade() {
+    // The cut is made after Round 2 completes. Only award cut bonus from Round 3 onwards.
+    const comp = getCompetition();
+    if (!comp) return false;
+    if (getTournamentState() === 'post') return true;
+    const period = Number(comp.status?.period || 0);
+    if (period >= 3) return true;
+    const detail = (comp.status?.type?.detail || comp.status?.type?.shortDetail || '').toUpperCase();
+    if (detail.includes('ROUND 3') || detail.includes('ROUND 4')) return true;
+    return false;
+}
+
 function getCompletedRounds() {
     // Estimate completed rounds from linescores that have values
     const comp = getCompetition();
@@ -985,8 +997,8 @@ function calculateTeamScore(entry) {
         result.rawTotal = sorted.slice(0, 4).reduce((sum, p) => sum + p.score, 0);
     }
 
-    // All-5-made-cut bonus (-1)
-    const cutBonus = result.competitionType === 'main' && result.allMadeCut ? -1 : 0;
+    // All-5-made-cut bonus (-1) — only awarded once the cut has been made (Round 3+)
+    const cutBonus = result.competitionType === 'main' && result.allMadeCut && isCutMade() ? -1 : 0;
 
     // Leader bonuses: check R1, R2, R3
     const pickSet = new Set(entry.picks);
@@ -1117,7 +1129,7 @@ function renderCompetitionTable(thead, tbody, scoredRows, emptyMessage, rowClass
             return `<td class="col-bp">${answered ? ans : '--'}</td>`;
         }).join('');
 
-        const cutBonusVal = result.competitionType === 'main' && result.allMadeCut ? -1 : 0;
+        const cutBonusVal = result.competitionType === 'main' && result.allMadeCut && isCutMade() ? -1 : 0;
         const ldrWinVal = (-1 * result.leaderBonuses) + (result.winnerBonus ? -2 : 0);
         const cutCell = cutBonusVal !== 0
             ? `<td class="col-bp bp-correct" title="All 5 made the cut">${cutBonusVal}</td>`
