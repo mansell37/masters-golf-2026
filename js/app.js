@@ -40,13 +40,22 @@ const ODDS_DATA = {
 // APPLICATION STATE
 // =============================================================
 let espnData       = null;   // raw ESPN response
-let playerMap      = {};     // playerId -> { id, name, flag, flagAlt, score, linescores, status, order }
+let playerMap      = {};     // playerId -> { id, name, flag, flagAlt, score, linescores, status, order, teeTime }
 let groups         = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-let entries        = [];     // [{ id, entrant, team, picks:[id x5], bonusAnswers:[] }]
+let entries        = [];     // [{ id, entrant, team, sweep, picks:[id x5], bonusAnswers:[] }]
 let bonusQuestions = [];     // [{ question, correctAnswer }]
 let activeTab      = 'sweep';
+let activeSweep    = 'nab';  // 'nab' | 'bnz' — which sweep is shown on the Sweepstake tab
+let activeDetailSweep = 'nab'; // 'nab' | 'bnz' | 'all' — filter on the Detail tab
 let adminMode      = false;
 let refreshTimer   = null;
+
+// Pre-set bonus questions for the 2026 Masters
+const DEFAULT_BONUS_QUESTIONS = [
+    { question: 'What will the best Rd1 score be?', correctAnswer: '' },
+    { question: 'How many current LIV players will make the cut (10 are playing)?', correctAnswer: '' },
+    { question: 'Will there be a hole in one? (Y/N)', correctAnswer: '' },
+];
 
 function useServerStorage() {
     return window.location.protocol !== 'file:';
@@ -213,6 +222,11 @@ async function loadInitialState() {
     if (useServerStorage()) {
         await loadStateFromServer();
     }
+    // Pre-populate bonus questions if none exist yet
+    if (bonusQuestions.length === 0) {
+        bonusQuestions = DEFAULT_BONUS_QUESTIONS.map(q => ({ ...q }));
+        saveBonus();
+    }
 }
 function saveGroups() {
     save(STORAGE.groups, groups);
@@ -284,6 +298,7 @@ function buildPlayerMap() {
             status:     c.status || {},
             sortOrder:  c.sortOrder ?? c.order ?? 999,
             odds:       matchOdds(name),
+            teeTime:    c.teeTime || c.status?.teeTime || null,
         };
     });
 }
@@ -342,11 +357,13 @@ function switchTab(tabId) {
 
 function renderCurrentTab() {
     switch (activeTab) {
-        case 'sweep':  renderSweepLeaderboard(); break;
-        case 'enter':  renderEntryForm(); renderEntriesList(); break;
-        case 'groups': renderGroups(); break;
-        case 'rules':  renderBonusDisplay(); break;
-        case 'golf':   renderGolfLeaderboard(); break;
+        case 'sweep':     renderSweepLeaderboard(); break;
+        case 'enter':     renderEntryForm(); renderEntriesList(); break;
+        case 'groups':    renderGroups(); break;
+        case 'rules':     renderBonusDisplay(); break;
+        case 'golf':      renderGolfLeaderboard(); break;
+        case 'detail':    renderDetailedLeaderboard(); break;
+        case 'analytics': renderAnalytics(); break;
     }
 }
 
@@ -616,6 +633,7 @@ function submitTeam(e) {
     e.preventDefault();
     const entrant = document.getElementById('entrantName').value.trim();
     const team    = document.getElementById('teamName').value.trim();
+    const sweep   = document.getElementById('sweepSelect').value || 'nab';
     const picks   = [];
     for (let g = 1; g <= 5; g++) {
         const v = document.getElementById(`pickGroup${g}`).value;
@@ -630,6 +648,7 @@ function submitTeam(e) {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         entrant,
         team,
+        sweep,
         picks,
         bonusAnswers,
         createdAt: Date.now(),
@@ -655,9 +674,10 @@ function renderEntriesList() {
     if (!entries.length) { el.innerHTML = '<p style="color:var(--gray-400);font-size:13px;padding:12px">No teams entered yet.</p>'; return; }
     el.innerHTML = entries.map(en => {
         const pickNames = en.picks.map(id => playerMap[id]?.name || id).join(', ');
+        const sweepLabel = (en.sweep || 'nab').toUpperCase();
         return `<div class="entry-card">
             <div>
-                <div class="ec-name">${en.team}</div>
+                <div class="ec-name">${en.team} <span class="badge-sweep badge-${en.sweep || 'nab'}">${sweepLabel}</span></div>
                 <div class="ec-team">${en.entrant}</div>
                 <div class="ec-picks">${pickNames}</div>
             </div>
@@ -1020,24 +1040,39 @@ function renderEliminatedTeams(eliminatedRows) {
     bodyEl.innerHTML = rows.join('');
 }
 
+function switchSweep(sw) {
+    activeSweep = sw;
+    document.querySelectorAll('.sweep-btn[data-sweep]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.sweep === sw);
+    });
+    renderSweepLeaderboard();
+}
+
 function renderSweepLeaderboard() {
     const mainHead = document.getElementById('sweepHead');
     const mainBody = document.getElementById('sweepBody');
     const plateHead = document.getElementById('plateHead');
     const plateBody = document.getElementById('plateBody');
 
-    if (!entries.length || Object.keys(playerMap).length === 0) {
+    // Update title
+    const titleEl = document.getElementById('sweepTitle');
+    if (titleEl) titleEl.textContent = (activeSweep === 'nab' ? 'NAB' : 'BNZ') + ' Sweepstake Leaderboard';
+
+    // Filter entries by active sweep
+    const sweepEntries = entries.filter(e => (e.sweep || 'nab') === activeSweep);
+
+    if (!sweepEntries.length || Object.keys(playerMap).length === 0) {
         mainHead.innerHTML = '';
         plateHead.innerHTML = '';
-        mainBody.innerHTML = `<tr><td colspan="${getSweepTableColSpan()}" class="empty-cell">No entries yet, or waiting for ESPN data.</td></tr>`;
+        mainBody.innerHTML = `<tr><td colspan="${getSweepTableColSpan()}" class="empty-cell">No entries yet for this sweepstake, or waiting for ESPN data.</td></tr>`;
         plateBody.innerHTML = `<tr><td colspan="${getSweepTableColSpan()}" class="empty-cell">No teams currently in the plate competition.</td></tr>`;
-        document.getElementById('sweepEntryCount').textContent = `${entries.length} entries`;
+        document.getElementById('sweepEntryCount').textContent = `${sweepEntries.length} entries`;
         document.getElementById('plateEntryCount').textContent = '0';
         renderEliminatedTeams([]);
         return;
     }
 
-    const scored = entries.map(en => ({
+    const scored = sweepEntries.map(en => ({
         entry: en,
         result: calculateTeamScore(en),
     }));
@@ -1064,7 +1099,7 @@ function renderSweepLeaderboard() {
 
     renderEliminatedTeams(eliminatedRows);
     document.getElementById('plateEntryCount').textContent = `${plateRows.length}`;
-    document.getElementById('sweepEntryCount').textContent = `${entries.length} entries (${mainRows.length} main, ${plateRows.length} plate, ${eliminatedRows.length} eliminated)`;
+    document.getElementById('sweepEntryCount').textContent = `${sweepEntries.length} entries (${mainRows.length} main, ${plateRows.length} plate, ${eliminatedRows.length} eliminated)`;
 }
 
 // =============================================================
@@ -1189,6 +1224,275 @@ function filterGolfPlayers(query) {
 }
 
 // =============================================================
+// DETAILED LEADERBOARD
+// =============================================================
+function switchDetailSweep(sw) {
+    activeDetailSweep = sw;
+    document.querySelectorAll('.sweep-btn[data-detail-sweep]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.detailSweep === sw);
+    });
+    renderDetailedLeaderboard();
+}
+
+function getNextTeeSydney(playerId) {
+    const p = playerMap[playerId];
+    if (!p || !p.teeTime) return null;
+    try {
+        const dt = new Date(p.teeTime);
+        if (isNaN(dt.getTime())) return null;
+        return dt.toLocaleString('en-AU', {
+            timeZone: 'Australia/Sydney',
+            weekday: 'short', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true,
+        });
+    } catch { return null; }
+}
+
+function renderDetailedLeaderboard() {
+    const container = document.getElementById('detailContent');
+    if (!container) return;
+
+    const filterSweep = activeDetailSweep;
+    const filtered = filterSweep === 'all'
+        ? entries
+        : entries.filter(e => (e.sweep || 'nab') === filterSweep);
+
+    if (!filtered.length) {
+        container.innerHTML = '<p class="empty-cell" style="padding:20px">No entries for this sweepstake yet.</p>';
+        return;
+    }
+
+    const scored = filtered
+        .map(en => ({ entry: en, result: calculateTeamScore(en) }))
+        .sort((a, b) => {
+            const aScore = a.result.grandTotal ?? 9999;
+            const bScore = b.result.grandTotal ?? 9999;
+            return aScore - bScore;
+        });
+
+    const roundLabels = ['R1', 'R2', 'R3', 'R4'];
+
+    const cards = scored.map(({ entry, result }, idx) => {
+        const sweepLabel = (entry.sweep || 'nab').toUpperCase();
+        const totalDisplay = result.grandTotal !== null ? fmtScoreNum(result.grandTotal) : 'E';
+        const totalClass = result.grandTotal !== null ? scoreClass(result.grandTotal.toString()) : '';
+        const pos = idx + 1;
+
+        const playerRows = result.playerScores.map((ps, gi) => {
+            const roundCells = roundLabels.map((rl, ri) => {
+                const raw = ps.roundScores[ri];
+                const val = raw != null ? formatRoundStrokes(raw) : '-';
+                const isLeading = !ps.isCut && getLeadersAfterRound(ri + 1).has(ps.playerId);
+                return `<td class="dc-rd${isLeading ? ' dc-leading' : ''}" title="${isLeading ? 'Leading after ' + rl : ''}">${val}${isLeading ? ' &#9733;' : ''}</td>`;
+            }).join('');
+
+            const teeTime = getNextTeeSydney(ps.playerId);
+            const teeCell = teeTime
+                ? `<td class="dc-tee">${teeTime} AEST</td>`
+                : `<td class="dc-tee dc-tee-none">${ps.isCut ? 'CUT' : '--'}</td>`;
+
+            const cutCls = ps.isCut ? ' dc-cut' : '';
+            const dropCls = ps.isDropped ? ' dc-dropped' : '';
+            return `<tr class="${cutCls}${dropCls}">
+                <td class="dc-gnum g${gi + 1}-cell">G${gi + 1}</td>
+                <td class="dc-player">${ps.name}${ps.isDropped ? ' <span class="dc-drop-tag">dropped</span>' : ''}</td>
+                ${roundCells}
+                ${teeCell}
+            </tr>`;
+        }).join('');
+
+        const bonusRows = bonusQuestions.map((bq, bi) => {
+            const ans = (entry.bonusAnswers?.[bi] || '').trim();
+            const correct = bq.correctAnswer && ans.toLowerCase() === bq.correctAnswer.trim().toLowerCase();
+            const icon = bq.correctAnswer ? (correct ? '&#10003;' : '&#10007;') : '';
+            const cls = bq.correctAnswer ? (correct ? 'dc-bq-correct' : 'dc-bq-wrong') : '';
+            return `<tr class="dc-bonus-row">
+                <td class="dc-bq-label" colspan="2">BQ${bi + 1}: ${bq.question}</td>
+                <td class="dc-bq-ans ${cls}" colspan="4">${ans || '<em>no answer</em>'} ${icon}</td>
+                <td class="dc-tee dc-bq-pts">${correct ? '-1 pt' : ''}</td>
+            </tr>`;
+        }).join('');
+
+        const bonusBreakdown = [
+            result.allMadeCut ? '-3 (all made cut)' : '',
+            result.leaderBonuses > 0 ? `-${result.leaderBonuses} (round leader)` : '',
+            result.winnerBonus > 0 ? '-2 (winner)' : '',
+            result.bonusCorrect > 0 ? `-${result.bonusCorrect} (bonus Qs)` : '',
+        ].filter(Boolean).join(', ') || 'none';
+
+        return `<div class="detail-card">
+            <div class="detail-card-header">
+                <span class="dc-pos">${pos}</span>
+                <span class="dc-team">${entry.team}</span>
+                <span class="dc-entrant">${entry.entrant}</span>
+                <span class="badge-sweep badge-${entry.sweep || 'nab'}">${sweepLabel}</span>
+                <span class="dc-bonus-summary">Bonuses: ${bonusBreakdown}</span>
+                <span class="dc-total ${totalClass}">${totalDisplay}</span>
+            </div>
+            <div class="detail-card-body">
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th class="dc-gnum">Grp</th>
+                            <th class="dc-player">Player</th>
+                            <th class="dc-rd">R1</th>
+                            <th class="dc-rd">R2</th>
+                            <th class="dc-rd">R3</th>
+                            <th class="dc-rd">R4</th>
+                            <th class="dc-tee">Next Tee (AEST)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${playerRows}
+                        ${bonusRows}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = cards;
+}
+
+// =============================================================
+// ANALYTICS
+// =============================================================
+function renderAnalytics() {
+    const container = document.getElementById('analyticsContent');
+    if (!container) return;
+
+    const nabEntries = entries.filter(e => (e.sweep || 'nab') === 'nab');
+    const bnzEntries = entries.filter(e => (e.sweep || 'nab') === 'bnz');
+    const total = entries.length;
+
+    if (total === 0) {
+        container.innerHTML = '<p class="empty-cell" style="padding:20px">No entries yet.</p>';
+        return;
+    }
+
+    // --- Entry summary ---
+    const summaryHtml = `
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <div class="ac-label">Total Entries</div>
+                <div class="ac-value">${total}</div>
+            </div>
+            <div class="analytics-card ac-nab">
+                <div class="ac-label">NAB Sweepstake</div>
+                <div class="ac-value">${nabEntries.length}</div>
+            </div>
+            <div class="analytics-card ac-bnz">
+                <div class="ac-label">BNZ Sweepstake</div>
+                <div class="ac-value">${bnzEntries.length}</div>
+            </div>
+        </div>`;
+
+    // --- Pick distribution per group ---
+    const dist = {};
+    for (let g = 1; g <= 5; g++) {
+        dist[g] = {};
+        (groups[g] || []).forEach(pid => { dist[g][pid] = { nab: 0, bnz: 0 }; });
+    }
+    entries.forEach(e => {
+        const sw = e.sweep || 'nab';
+        e.picks.forEach((pid, idx) => {
+            const g = idx + 1;
+            if (!dist[g][pid]) dist[g][pid] = { nab: 0, bnz: 0 };
+            dist[g][pid][sw]++;
+        });
+    });
+
+    const groupPickHtml = [1, 2, 3, 4, 5].map(g => {
+        const players = Object.entries(dist[g])
+            .map(([pid, counts]) => ({
+                pid,
+                name: playerMap[pid]?.name || pid,
+                total: counts.nab + counts.bnz,
+                nab: counts.nab,
+                bnz: counts.bnz,
+            }))
+            .sort((a, b) => b.total - a.total);
+
+        const rows = players.map(p => {
+            const pct = total > 0 ? Math.round((p.total / total) * 100) : 0;
+            const nabPct = nabEntries.length > 0 ? Math.round((p.nab / nabEntries.length) * 100) : 0;
+            const bnzPct = bnzEntries.length > 0 ? Math.round((p.bnz / bnzEntries.length) * 100) : 0;
+            return `<tr>
+                <td class="ap-name">${p.name}</td>
+                <td class="ap-pct">
+                    <div class="ap-bar-wrap">
+                        <div class="ap-bar g${g}-bar" style="width:${pct}%"></div>
+                    </div>
+                    <span>${pct}%</span>
+                </td>
+                <td class="ap-count"><span class="badge-sweep badge-nab">${p.nab}</span></td>
+                <td class="ap-count"><span class="badge-sweep badge-bnz">${p.bnz}</span></td>
+            </tr>`;
+        }).join('');
+
+        return `<div class="analytics-group-card g${g}-group-header">
+            <div class="ag-header">Group ${g} <span class="ag-hint">pick distribution</span></div>
+            <table class="analytics-picks-table">
+                <thead><tr><th>Player</th><th>All entries</th><th>NAB</th><th>BNZ</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+    }).join('');
+
+    // --- Current leaders per sweep ---
+    let leadersHtml = '';
+    if (Object.keys(playerMap).length > 0) {
+        const sweepScores = { nab: nabEntries, bnz: bnzEntries };
+        const leaderCards = Object.entries(sweepScores).map(([sw, swEntries]) => {
+            if (!swEntries.length) return '';
+            const scored = swEntries
+                .map(en => ({ entry: en, result: calculateTeamScore(en) }))
+                .filter(s => s.result.grandTotal !== null)
+                .sort((a, b) => a.result.grandTotal - b.result.grandTotal);
+            if (!scored.length) return '';
+            const leader = scored[0];
+            return `<div class="analytics-card ac-${sw}">
+                <div class="ac-label">${sw.toUpperCase()} Leader</div>
+                <div class="ac-value">${leader.entry.team}</div>
+                <div class="ac-sub">${leader.entry.entrant} &mdash; ${fmtScoreNum(leader.result.grandTotal)}</div>
+            </div>`;
+        }).join('');
+        if (leaderCards.trim()) {
+            leadersHtml = `<div class="analytics-section-title">Current Leaders</div><div class="analytics-grid">${leaderCards}</div>`;
+        }
+    }
+
+    // --- Most popular picks ---
+    const allPicks = {};
+    entries.forEach(e => e.picks.forEach(pid => {
+        allPicks[pid] = (allPicks[pid] || 0) + 1;
+    }));
+    const topPicks = Object.entries(allPicks)
+        .map(([pid, cnt]) => ({ name: playerMap[pid]?.name || pid, cnt }))
+        .sort((a, b) => b.cnt - a.cnt)
+        .slice(0, 5);
+    const topPicksHtml = topPicks.length ? `
+        <div class="analytics-section-title">Most Popular Picks (all entries)</div>
+        <div class="analytics-grid">
+            ${topPicks.map(p => `
+                <div class="analytics-card">
+                    <div class="ac-label">${p.name}</div>
+                    <div class="ac-value">${p.cnt}</div>
+                    <div class="ac-sub">${Math.round((p.cnt / total) * 100)}% of teams</div>
+                </div>`).join('')}
+        </div>` : '';
+
+    container.innerHTML = `
+        <div class="analytics-section-title">Entry Summary</div>
+        ${summaryHtml}
+        ${leadersHtml}
+        ${topPicksHtml}
+        <div class="analytics-section-title">Pick Distribution by Group</div>
+        <div class="analytics-groups-wrap">${groupPickHtml}</div>
+    `;
+}
+
+// =============================================================
 // ADMIN MODE
 // =============================================================
 function toggleAdmin() {
@@ -1252,6 +1556,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('saveBonusBtn')?.addEventListener('click', saveBonusQuestions);
     document.getElementById('cancelBonusBtn')?.addEventListener('click', () => {
         document.getElementById('bonusModal').classList.remove('open');
+    });
+
+    // Sweep switcher buttons (Sweepstake tab)
+    document.querySelectorAll('.sweep-btn[data-sweep]').forEach(btn => {
+        btn.addEventListener('click', () => switchSweep(btn.dataset.sweep));
+    });
+
+    // Detail sweep switcher buttons (Detail tab)
+    document.querySelectorAll('.sweep-btn[data-detail-sweep]').forEach(btn => {
+        btn.addEventListener('click', () => switchDetailSweep(btn.dataset.detailSweep));
     });
 
     // Initial fetch
