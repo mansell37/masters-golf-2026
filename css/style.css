@@ -715,6 +715,12 @@ body.admin-mode .group-player:hover .gp-remove { opacity: 1; }
 /* ========================================
    BONUS ADMIN PANEL (Enter Team tab)
    ======================================== */
+.backup-panel {
+    background: #f0f7ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+}
 .bonus-admin-panel {
     background: #fffdf7;
     border: 1px solid #efe5cd;

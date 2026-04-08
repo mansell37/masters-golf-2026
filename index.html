@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masters Sweepstake</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
+    <link rel="stylesheet" href="css/style.css?v=10">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -153,6 +153,17 @@
                 <div class="entries-panel">
                     <h2>Submitted Teams <span id="teamCount" class="badge">0</span></h2>
                     <div id="entriesList" class="entries-list"></div>
+                    <div class="admin-only backup-panel" style="margin-top:16px">
+                        <h3 class="bonus-admin-title">&#128190; Data Backup &amp; Restore</h3>
+                        <p class="bonus-admin-hint">Download a backup before any deployment. Restore from a previous backup if data is lost.</p>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                            <button class="btn btn-export" onclick="exportStateBackup()">&#8659; Download Backup</button>
+                            <label class="btn btn-auto" style="cursor:pointer">
+                                &#8657; Restore from Backup
+                                <input type="file" accept=".json" style="display:none" onchange="importStateBackup(event)">
+                            </label>
+                        </div>
+                    </div>
                     <div class="admin-only bonus-admin-panel" style="margin-top:20px">
                         <h3 class="bonus-admin-title">&#9733; Bonus Question Answers</h3>
                         <p class="bonus-admin-hint">Enter correct answers once known. Scores update instantly.</p>
@@ -303,6 +314,6 @@
         <p>Data sourced from ESPN | <span id="footerUpdated">--</span></p>
     </footer>
 
-    <script src="js/app.js?v=16"></script>
+    <script src="js/app.js?v=17"></script>
 </body>
 </html>

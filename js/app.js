@@ -708,6 +708,50 @@ function renderEntriesList() {
 // =============================================================
 // BONUS QUESTIONS
 // =============================================================
+// =============================================================
+// BACKUP / RESTORE
+// =============================================================
+function exportStateBackup() {
+    const snapshot = {
+        exportedAt: new Date().toISOString(),
+        groups,
+        entries,
+        bonus: bonusQuestions,
+    };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `masters-sweep-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importStateBackup(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async e => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!data.entries || !data.groups) { alert('Invalid backup file.'); return; }
+            if (!confirm(`Restore ${data.entries.length} entries from backup dated ${data.exportedAt?.slice(0,10) || 'unknown'}? This will replace current data.`)) return;
+            groups         = data.groups;
+            entries        = normalizeEntries(data.entries);
+            bonusQuestions = Array.isArray(data.bonus) ? data.bonus : bonusQuestions;
+            saveGroups();
+            saveEntries();
+            saveBonus();
+            renderAll();
+            alert(`Restored ${entries.length} entries successfully.`);
+        } catch (err) {
+            alert('Failed to read backup file: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
 function renderBonusAdminPanel() {
     const el = document.getElementById('bonusAdminForm');
     if (!el) return;
