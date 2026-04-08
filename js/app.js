@@ -890,6 +890,21 @@ function getLeadersAfterRound(roundNum) {
     return new Set(leaders);
 }
 
+function getCurrentLeaders() {
+    // Returns Set of playerIds currently leading the tournament (lowest active score)
+    const comp = getCompetition();
+    if (!comp) return new Set();
+    let best = Infinity;
+    let leaders = [];
+    (comp.competitors || []).forEach(c => {
+        if (isPlayerCut(c.id)) return;
+        const sc = parseScore(c.score);
+        if (sc < best) { best = sc; leaders = [c.id]; }
+        else if (sc === best) leaders.push(c.id);
+    });
+    return new Set(leaders);
+}
+
 function getTournamentWinners() {
     // After tournament ends, the winner is the player with the lowest total score
     if (getTournamentState() !== 'post') return new Set();
@@ -1037,15 +1052,35 @@ function getSweepHeaderHtml() {
 }
 
 function buildGroupCells(entry, result) {
+    const currentLeaders = getCurrentLeaders();
+    const r1Leaders      = getLeadersAfterRound(1);
+    const r2Leaders      = getLeadersAfterRound(2);
+    const r3Leaders      = getLeadersAfterRound(3);
+    const winners        = getTournamentWinners();
+
     return entry.picks.map((pid, gi) => {
         const ps = result.playerScores.find(p => p.playerId === pid);
         if (!ps) return `<td class="g${gi + 1}-cell col-player-pick">--</td><td class="g${gi + 1}-cell col-sc">--</td><td class="g${gi + 1}-cell col-thru">--</td>`;
 
         const dropped = ps.isDropped ? ' dropped-score' : '';
-        const cutCls = ps.isCut ? ' player-cut' : '';
-        const scCls = ps.isCut ? 'score-cut' : scoreClass(ps.score.toString());
+        const cutCls  = ps.isCut ? ' player-cut' : '';
+        const scCls   = ps.isCut ? 'score-cut' : scoreClass(ps.score.toString());
 
-        return `<td class="g${gi + 1}-cell col-player-pick${cutCls}${dropped}">${ps.name}</td>
+        // Build leader badges
+        const badges = [];
+        if (winners.has(pid))        badges.push(`<span class="ldr-badge ldr-win" title="Tournament Winner">&#127942;</span>`);
+        else if (currentLeaders.has(pid)) badges.push(`<span class="ldr-badge ldr-now" title="Current Leader">&#9733; Leader</span>`);
+        if (r1Leaders.has(pid))      badges.push(`<span class="ldr-badge ldr-r1" title="Led after Round 1">R1</span>`);
+        if (r2Leaders.has(pid))      badges.push(`<span class="ldr-badge ldr-r2" title="Led after Round 2">R2</span>`);
+        if (r3Leaders.has(pid))      badges.push(`<span class="ldr-badge ldr-r3" title="Led after Round 3">R3</span>`);
+        const badgeHtml = badges.join('');
+
+        const nameCls = (currentLeaders.has(pid) && !ps.isCut) ? ' player-leading' : '';
+        const winCls  = winners.has(pid) ? ' player-winner' : '';
+
+        return `<td class="g${gi + 1}-cell col-player-pick${cutCls}${dropped}${nameCls}${winCls}">
+                    ${ps.name}${badgeHtml}
+                </td>
                 <td class="g${gi + 1}-cell col-sc ${scCls}${dropped}">${ps.isCut ? 'CUT' : fmtScoreNum(ps.score)}</td>
                 <td class="g${gi + 1}-cell col-thru${dropped}">${ps.thru}</td>`;
     }).join('');
