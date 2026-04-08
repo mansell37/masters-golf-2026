@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masters Sweepstake</title>
-    <link rel="stylesheet" href="css/style.css?v=6">
+    <link rel="stylesheet" href="css/style.css?v=7">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -21,6 +21,8 @@
                 <button class="tab-btn" data-tab="groups">Player Groups</button>
                 <button class="tab-btn" data-tab="rules">Rules</button>
                 <button class="tab-btn" data-tab="golf">Golf Leaderboard</button>
+                <button class="tab-btn" data-tab="detail">Details</button>
+                <button class="tab-btn" data-tab="analytics">Analytics</button>
             </nav>
             <div class="header-actions">
                 <button id="adminToggle" class="btn btn-admin" title="Toggle admin mode">Admin</button>
@@ -51,12 +53,16 @@
         <!-- ============ SWEEPSTAKE TAB ============ -->
         <section id="tab-sweep" class="tab-content active">
             <div class="sweep-header">
-                <h2>Sweepstake Leaderboard</h2>
+                <h2 id="sweepTitle">NAB Sweepstake Leaderboard</h2>
                 <div class="sweep-meta">
                     <span id="sweepEntryCount">0 entries</span>
                     <span class="sep">|</span>
                     <span>Last updated: <strong id="lastUpdated">--</strong></span>
                 </div>
+            </div>
+            <div class="sweep-switcher">
+                <button class="sweep-btn active" data-sweep="nab">NAB Sweepstake</button>
+                <button class="sweep-btn" data-sweep="bnz">BNZ Sweepstake</button>
             </div>
             <div class="sweep-table-wrapper">
                 <table class="sweep-table" id="sweepTable">
@@ -112,6 +118,13 @@
                         <div class="form-row">
                             <label for="teamName">Team Name</label>
                             <input type="text" id="teamName" required placeholder="e.g. No Yanks Allowed">
+                        </div>
+                        <div class="form-row">
+                            <label for="sweepSelect">Sweepstake</label>
+                            <select id="sweepSelect" required>
+                                <option value="nab">NAB Sweepstake</option>
+                                <option value="bnz">BNZ Sweepstake</option>
+                            </select>
                         </div>
                         <div class="form-row">
                             <label for="pickGroup1">Group 1</label>
@@ -233,13 +246,38 @@
             <div class="player-count" id="playerCount"></div>
         </section>
 
+        <!-- ============ DETAIL LEADERBOARD TAB ============ -->
+        <section id="tab-detail" class="tab-content">
+            <div class="detail-header">
+                <h2>Detailed Leaderboard</h2>
+                <div class="detail-switcher">
+                    <button class="sweep-btn active" data-detail-sweep="nab">NAB Sweepstake</button>
+                    <button class="sweep-btn" data-detail-sweep="bnz">BNZ Sweepstake</button>
+                    <button class="sweep-btn" data-detail-sweep="all">All Entries</button>
+                </div>
+            </div>
+            <div id="detailContent">
+                <p class="empty-cell" style="padding:20px">No entries yet.</p>
+            </div>
+        </section>
+
+        <!-- ============ ANALYTICS TAB ============ -->
+        <section id="tab-analytics" class="tab-content">
+            <div class="analytics-header">
+                <h2>Sweep Analytics</h2>
+            </div>
+            <div id="analyticsContent">
+                <p class="empty-cell" style="padding:20px">Loading analytics...</p>
+            </div>
+        </section>
+
     </main>
 
     <!-- Admin modal for bonus questions -->
     <div class="modal-overlay" id="bonusModal">
         <div class="modal">
-            <h3>Edit Bonus Questions</h3>
-            <p class="modal-hint">Add up to 3 bonus questions. After the tournament, mark answers correct to apply score reductions.</p>
+            <h3>Edit Bonus Questions &amp; Answers</h3>
+            <p class="modal-hint">Questions are pre-set. Enter correct answers once they are known to apply score reductions.</p>
             <div id="bonusModalBody"></div>
             <div class="modal-actions">
                 <button class="btn btn-submit" id="saveBonusBtn">Save</button>
@@ -252,6 +290,6 @@
         <p>Data sourced from ESPN | <span id="footerUpdated">--</span></p>
     </footer>
 
-    <script src="js/app.js?v=12"></script>
+    <script src="js/app.js?v=13"></script>
 </body>
 </html>
