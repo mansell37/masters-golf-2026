@@ -254,7 +254,7 @@ body.admin-mode .admin-only-block { display: block !important; }
     white-space: nowrap;
 }
 .sweep-table th {
-    padding: 8px 6px;
+    padding: 7px 4px;
     text-align: center;
     font-size: 10px;
     font-weight: 700;
@@ -267,19 +267,19 @@ body.admin-mode .admin-only-block { display: block !important; }
     background: #fbf7ea;
 }
 .sweep-table td {
-    padding: 6px 6px;
+    padding: 5px 4px;
     text-align: center;
     border-bottom: 1px solid var(--gray-100);
     font-variant-numeric: tabular-nums;
 }
-.sweep-table .col-team { text-align: left; min-width: 200px; font-weight: 600; }
+.sweep-table .col-team { text-align: left; min-width: 150px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 .sweep-table .col-team span.entrant { font-weight: 400; color: var(--gray-500); font-size: 11px; }
-.sweep-table .col-pos { width: 40px; font-weight: 700; }
-.sweep-table .col-player-pick { min-width: 120px; text-align: left; font-size: 11px; }
-.sweep-table .col-sc { width: 40px; }
-.sweep-table .col-thru { width: 50px; color: var(--gray-500); font-size: 11px; }
-.sweep-table .col-bp { width: 36px; }
-.sweep-table .col-total { width: 50px; font-weight: 800; font-size: 13px; }
+.sweep-table .col-pos { width: 32px; font-weight: 700; }
+.sweep-table .col-player-pick { min-width: 90px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 11px; }
+.sweep-table .col-sc { width: 36px; }
+.sweep-table .col-thru { width: 44px; color: var(--gray-500); font-size: 11px; }
+.sweep-table .col-bp { width: 30px; }
+.sweep-table .col-total { width: 46px; font-weight: 800; font-size: 13px; }
 
 /* Group header coloring */
 .sweep-table th.g1-head { background: var(--g1-head); color: white; }

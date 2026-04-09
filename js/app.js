@@ -912,10 +912,12 @@ function formatShortAEST(isoOrDateStr) {
     try {
         const dt = new Date(isoOrDateStr);
         if (isNaN(dt.getTime())) return null;
-        return dt.toLocaleString('en-AU', {
+        // Compact format: "10:26p" or "8:30a" (no space, single letter am/pm)
+        const str = dt.toLocaleString('en-AU', {
             timeZone: 'Australia/Sydney',
-            hour: '2-digit', minute: '2-digit', hour12: true,
+            hour: 'numeric', minute: '2-digit', hour12: true,
         });
+        return str.replace(/\s*(am|pm)$/i, m => m.trim()[0].toLowerCase());
     } catch { return null; }
 }
 
