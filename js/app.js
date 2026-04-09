@@ -381,14 +381,16 @@ function getEvent()       { return espnData?.events?.[0]; }
 function getCompetition() { return getEvent()?.competitions?.[0]; }
 function getTournamentState() { return getCompetition()?.status?.type?.state || 'pre'; }
 function isCutMade() {
-    // The cut is made after Round 2 completes. Only award cut bonus from Round 3 onwards.
+    // ESPN uses state:'post' to mean "current period is complete" (not whole tournament).
+    // Cut is made only after Round 2 is fully done:
+    //   - period 3+ means R3 has started → R2 definitely done
+    //   - period 2 AND state 'post' means R2 just completed (between rounds)
     const comp = getCompetition();
     if (!comp) return false;
-    if (getTournamentState() === 'post') return true;
     const period = Number(comp.status?.period || 0);
+    const state = getTournamentState();
     if (period >= 3) return true;
-    const detail = (comp.status?.type?.detail || comp.status?.type?.shortDetail || '').toUpperCase();
-    if (detail.includes('ROUND 3') || detail.includes('ROUND 4')) return true;
+    if (period === 2 && state === 'post') return true;
     return false;
 }
 
@@ -1009,10 +1011,13 @@ function getCurrentLeaders() {
 }
 
 function getTournamentWinners() {
-    // After tournament ends, the winner is the player with the lowest total score
-    if (getTournamentState() !== 'post') return new Set();
+    // Winner bonus only after all 4 rounds are fully complete.
+    // ESPN uses state:'post' for each completed round, so we must ALSO check period >= 4.
     const comp = getCompetition();
     if (!comp) return new Set();
+    const period = Number(comp.status?.period || 0);
+    const state = getTournamentState();
+    if (period < 4 || state !== 'post') return new Set();
 
     let best = Infinity;
     let winners = [];
