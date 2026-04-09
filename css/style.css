@@ -272,7 +272,7 @@ body.admin-mode .admin-only-block { display: block !important; }
     border-bottom: 1px solid var(--gray-100);
     font-variant-numeric: tabular-nums;
 }
-.sweep-table .col-team { text-align: left; min-width: 150px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.sweep-table .col-team { text-align: left; min-width: 190px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 .sweep-table .col-team span.entrant { font-weight: 400; color: var(--gray-500); font-size: 11px; }
 .sweep-table .col-pos { width: 32px; font-weight: 700; }
 .sweep-table .col-player-pick { min-width: 90px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 11px; }

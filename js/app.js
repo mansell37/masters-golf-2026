@@ -1131,11 +1131,11 @@ function getSweepHeaderHtml() {
     return `<tr>
         <th class="col-pos">Pos</th>
         <th class="col-team" style="text-align:left">Team</th>
-        <th class="g1-head col-player-pick">Group 1</th><th class="g1-head col-sc">Sc</th><th class="g1-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
-        <th class="g2-head col-player-pick">Group 2</th><th class="g2-head col-sc">Sc</th><th class="g2-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
-        <th class="g3-head col-player-pick">Group 3</th><th class="g3-head col-sc">Sc</th><th class="g3-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
-        <th class="g4-head col-player-pick">Group 4</th><th class="g4-head col-sc">Sc</th><th class="g4-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
-        <th class="g5-head col-player-pick">Group 5</th><th class="g5-head col-sc">Sc</th><th class="g5-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
+        <th class="g1-head col-player-pick">Group 1</th><th class="g1-head col-sc">Sc</th><th class="g1-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru</th>
+        <th class="g2-head col-player-pick">Group 2</th><th class="g2-head col-sc">Sc</th><th class="g2-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru</th>
+        <th class="g3-head col-player-pick">Group 3</th><th class="g3-head col-sc">Sc</th><th class="g3-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru</th>
+        <th class="g4-head col-player-pick">Group 4</th><th class="g4-head col-sc">Sc</th><th class="g4-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru</th>
+        <th class="g5-head col-player-pick">Group 5</th><th class="g5-head col-sc">Sc</th><th class="g5-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru</th>
         ${bonusQuestions.map((bq, i) => `<th class="col-bp" title="${bq.question}">BQ${i + 1}</th>`).join('')}
         <th class="col-bp col-bp-cut" title="All 5 players made the cut (-1)">Cut</th>
         <th class="col-bp col-bp-ldr" title="Round leader after R1/R2/R3 (-1 each) + Tournament winner (-2)">Ldr/Win</th>
@@ -1160,13 +1160,8 @@ function buildGroupCells(entry, result) {
         const cutCls  = ps.isCut ? ' player-cut' : '';
         const scCls   = ps.isCut ? 'score-cut' : scoreClass(ps.score.toString());
 
-        // Build leader badges
-        const badges = [];
-        if (winners.has(pid))        badges.push(`<span class="ldr-badge ldr-win" title="Tournament Winner">&#127942;</span>`);
-        if (r1Leaders.has(pid))      badges.push(`<span class="ldr-badge ldr-r1" title="Led after Round 1">R1</span>`);
-        if (r2Leaders.has(pid))      badges.push(`<span class="ldr-badge ldr-r2" title="Led after Round 2">R2</span>`);
-        if (r3Leaders.has(pid))      badges.push(`<span class="ldr-badge ldr-r3" title="Led after Round 3">R3</span>`);
-        const badgeHtml = badges.join('');
+        // Build leader badges (winner trophy only — R1/R2/R3 text badges removed to save space)
+        const badgeHtml = winners.has(pid) ? `<span class="ldr-badge ldr-win" title="Tournament Winner">&#127942;</span>` : '';
 
         const nameCls = (currentLeaders.has(pid) && !ps.isCut) ? ' player-leading' : '';
         const winCls  = winners.has(pid) ? ' player-winner' : '';
