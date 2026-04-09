@@ -960,21 +960,26 @@ function getPlayerRoundScore(playerId, roundIdx) {
 
 function getLeadersAfterRound(roundNum) {
     // roundNum: 1-4 (R1, R2, R3, R4)
-    // Returns Set of playerIds who were leading after that round
+    // Returns Set of playerIds who were leading after that round COMPLETED.
+    // Only evaluated once the tournament has moved past that round.
     const comp = getCompetition();
     if (!comp) return new Set();
+
+    // Don't award until the round is fully finished (period advances when round ends)
+    const period = Number(comp.status?.period || 1);
+    if (period <= roundNum) return new Set();
 
     let best = Infinity;
     let leaders = [];
 
     (comp.competitors || []).forEach(c => {
         const ls = c.linescores || [];
-        // Check if this player has completed up to roundNum
         let total = 0;
         let hasAll = true;
         for (let r = 0; r < roundNum; r++) {
             const v = ls[r]?.value;
-            if (v == null) { hasAll = false; break; }
+            // Exclude nulls AND zero-value entries (not-started players have value=0)
+            if (v == null || v === 0) { hasAll = false; break; }
             total += v;
         }
         if (!hasAll) return;
