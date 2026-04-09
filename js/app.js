@@ -865,6 +865,18 @@ function getPlayerThru(playerId) {
     const thru = p.status?.thru;
     if (thru === 18) return 'F';
     if (thru != null) return thru;
+    // Player hasn't started — show tee time if available
+    if (p.teeTime) {
+        try {
+            const dt = new Date(p.teeTime);
+            if (!isNaN(dt.getTime())) {
+                return dt.toLocaleString('en-AU', {
+                    timeZone: 'Australia/Sydney',
+                    hour: '2-digit', minute: '2-digit', hour12: true,
+                });
+            }
+        } catch { /* fall through */ }
+    }
     return '--';
 }
 
@@ -1049,11 +1061,11 @@ function getSweepHeaderHtml() {
     return `<tr>
         <th class="col-pos">Pos</th>
         <th class="col-team" style="text-align:left">Team</th>
-        <th class="g1-head col-player-pick">Group 1</th><th class="g1-head col-sc">Sc</th><th class="g1-head col-thru">Thru</th>
-        <th class="g2-head col-player-pick">Group 2</th><th class="g2-head col-sc">Sc</th><th class="g2-head col-thru">Thru</th>
-        <th class="g3-head col-player-pick">Group 3</th><th class="g3-head col-sc">Sc</th><th class="g3-head col-thru">Thru</th>
-        <th class="g4-head col-player-pick">Group 4</th><th class="g4-head col-sc">Sc</th><th class="g4-head col-thru">Thru</th>
-        <th class="g5-head col-player-pick">Group 5</th><th class="g5-head col-sc">Sc</th><th class="g5-head col-thru">Thru</th>
+        <th class="g1-head col-player-pick">Group 1</th><th class="g1-head col-sc">Sc</th><th class="g1-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
+        <th class="g2-head col-player-pick">Group 2</th><th class="g2-head col-sc">Sc</th><th class="g2-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
+        <th class="g3-head col-player-pick">Group 3</th><th class="g3-head col-sc">Sc</th><th class="g3-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
+        <th class="g4-head col-player-pick">Group 4</th><th class="g4-head col-sc">Sc</th><th class="g4-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
+        <th class="g5-head col-player-pick">Group 5</th><th class="g5-head col-sc">Sc</th><th class="g5-head col-thru" title="Holes completed (F=finished) or tee time (AEST) if not yet started">Thru/Tee</th>
         ${bonusQuestions.map((bq, i) => `<th class="col-bp" title="${bq.question}">BQ${i + 1}</th>`).join('')}
         <th class="col-bp col-bp-cut" title="All 5 players made the cut (-1)">Cut</th>
         <th class="col-bp col-bp-ldr" title="Round leader after R1/R2/R3 (-1 each) + Tournament winner (-2)">Ldr/Win</th>
