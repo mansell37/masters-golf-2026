@@ -960,18 +960,22 @@ function getPlayerRoundScore(playerId, roundIdx) {
 
 function getLeadersAfterRound(roundNum) {
     // roundNum: 1-4 (R1, R2, R3, R4)
-    // Returns Set of playerIds who were leading after that round COMPLETED.
-    // Only evaluated once the tournament has moved past that round.
+    // If the round is currently in progress, returns the live tournament leader(s).
+    // If the round is complete, returns whoever led by total strokes at the end.
     const comp = getCompetition();
     if (!comp) return new Set();
 
-    // Don't award until the round is fully finished (period advances when round ends)
     const period = Number(comp.status?.period || 1);
-    if (period <= roundNum) return new Set();
 
+    // Round hasn't started yet — no bonus
+    if (period < roundNum) return new Set();
+
+    // Round is currently in progress — use live TO PAR leader
+    if (period === roundNum) return getCurrentLeaders();
+
+    // Round is complete — find leader by lowest raw stroke total
     let best = Infinity;
     let leaders = [];
-
     (comp.competitors || []).forEach(c => {
         const ls = c.linescores || [];
         let total = 0;
