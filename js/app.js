@@ -1549,7 +1549,7 @@ function renderDetailedLeaderboard() {
         }).join('');
 
         const bonusBreakdown = [
-            result.allMadeCut ? '-3 (all made cut)' : '',
+            result.allMadeCut && isCutMade() ? '-1 (all made cut)' : '',
             result.leaderBonuses > 0 ? `-${result.leaderBonuses} (round leader)` : '',
             result.winnerBonus > 0 ? '-2 (winner)' : '',
             result.bonusCorrect > 0 ? `-${result.bonusCorrect} (bonus Qs)` : '',

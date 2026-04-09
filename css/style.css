@@ -272,14 +272,36 @@ body.admin-mode .admin-only-block { display: block !important; }
     border-bottom: 1px solid var(--gray-100);
     font-variant-numeric: tabular-nums;
 }
-.sweep-table .col-team { text-align: left; min-width: 190px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
-.sweep-table .col-team span.entrant { font-weight: 400; color: var(--gray-500); font-size: 11px; }
-.sweep-table .col-pos { width: 32px; font-weight: 700; }
+
+/* Pos + Team columns: sticky left, distinct warm-green tint to anchor the row */
+.sweep-table .col-pos {
+    width: 32px; font-weight: 700;
+    position: sticky; left: 0; z-index: 2;
+    background: #e8f0e9;
+    border-right: 1px solid #c8d9c9;
+}
+.sweep-table .col-team {
+    text-align: left; min-width: 190px; max-width: 190px;
+    overflow: hidden; text-overflow: ellipsis; font-weight: 600;
+    position: sticky; left: 32px; z-index: 2;
+    background: #e8f0e9;
+    border-right: 2px solid #b0c8b2;
+    padding-left: 8px;
+}
+.sweep-table th.col-pos, .sweep-table th.col-team {
+    background: #d0e4d2 !important;
+    border-right-color: #b0c8b2;
+}
+.sweep-table .col-team span.entrant { font-weight: 400; color: #5a7a5c; font-size: 11px; }
+
 .sweep-table .col-player-pick { min-width: 90px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 11px; }
 .sweep-table .col-sc { width: 36px; }
 .sweep-table .col-thru { width: 44px; color: var(--gray-500); font-size: 11px; }
 .sweep-table .col-bp { width: 30px; }
-.sweep-table .col-total { width: 46px; font-weight: 800; font-size: 13px; }
+.sweep-table .col-total {
+    width: 46px; font-weight: 800; font-size: 13px;
+    border-left: 2px solid #c8d9c9;
+}
 
 /* Group header coloring */
 .sweep-table th.g1-head { background: var(--g1-head); color: white; }
@@ -294,7 +316,9 @@ body.admin-mode .admin-only-block { display: block !important; }
 .sweep-table td.g4-cell { background: var(--g4-bg); }
 .sweep-table td.g5-cell { background: var(--g5-bg); }
 
-.sweep-table tbody tr:hover td { filter: brightness(0.97); }
+.sweep-table tbody tr:hover td { filter: brightness(0.96); }
+.sweep-table tbody tr:hover .col-pos,
+.sweep-table tbody tr:hover .col-team { filter: brightness(0.94); }
 
 .sweep-table .score-under { color: var(--red-600); font-weight: 700; }
 .sweep-table .score-over { color: var(--gray-700); }
@@ -303,9 +327,13 @@ body.admin-mode .admin-only-block { display: block !important; }
 .sweep-table .player-cut { color: var(--gray-400); }
 .sweep-table .dropped-score { opacity: 0.35; }
 
+/* Row medal tints */
 .sweep-row-gold td { background-color: #fff8da !important; }
+.sweep-row-gold .col-pos, .sweep-row-gold .col-team { background-color: #f5e87a !important; }
 .sweep-row-silver td { background-color: #f6faef !important; }
+.sweep-row-silver .col-pos, .sweep-row-silver .col-team { background-color: #e0edcf !important; }
 .sweep-row-plate td { background-color: var(--blue-50) !important; }
+.sweep-row-plate .col-pos, .sweep-row-plate .col-team { background-color: #d0e4f7 !important; }
 
 .sweep-table .delete-btn {
     background: none; border: none; color: var(--red-500); cursor: pointer;
