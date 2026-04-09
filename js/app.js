@@ -299,13 +299,44 @@ function getEspnApiUrl() {
     return ESPN_API_PROXY;
 }
 
+function extractTeeTimeFromStats(roundLinescores) {
+    // ESPN buries tee time in linescores[0].statistics.categories[0].stats as a date string
+    // e.g. "Thu Apr 09 08:26:00 PDT 2026" — but the timezone label is wrong (EDT not PDT)
+    try {
+        const stats = roundLinescores?.[0]?.statistics?.categories?.[0]?.stats || [];
+        for (let i = stats.length - 1; i >= 0; i--) {
+            const dv = stats[i]?.displayValue || '';
+            if (/\d{4}/.test(dv)) {
+                // Replace incorrect PDT label with the actual Augusta timezone (EDT)
+                const fixed = dv.replace(/\bPDT\b/, 'EDT').replace(/\bPST\b/, 'EST');
+                const dt = new Date(fixed);
+                if (!isNaN(dt.getTime())) return dt.toISOString();
+            }
+        }
+    } catch {}
+    return null;
+}
+
 function buildPlayerMap() {
     playerMap = {};
     const comp = getCompetition();
     if (!comp) return;
+    const currentPeriod = Number(comp.status?.period || 1);
+    const currentRoundIdx = Math.max(0, currentPeriod - 1);
+
     (comp.competitors || []).forEach(c => {
         const a = c.athlete || {};
         const name = a.displayName || a.fullName || 'Unknown';
+        const roundLinescores = c.linescores || [];
+
+        // THRU: ESPN nests per-hole linescores inside the current round's linescore entry
+        const currentRoundData = roundLinescores[currentRoundIdx] || {};
+        const holeScores = currentRoundData.linescores || [];
+        const thruCount = holeScores.length;
+
+        // Tee time: try obvious fields first, then dig into stats
+        const teeTime = c.teeTime || c.status?.teeTime || extractTeeTimeFromStats(roundLinescores);
+
         playerMap[c.id] = {
             id:         c.id,
             name,
@@ -313,12 +344,13 @@ function buildPlayerMap() {
             flag:       a.flag?.href || '',
             flagAlt:    a.flag?.alt || '',
             score:      c.score ?? 'E',
-            linescores: c.linescores || [],
+            linescores: roundLinescores,
+            thruCount,
             order:      c.order || 999,
             status:     c.status || {},
             sortOrder:  c.sortOrder ?? c.order ?? 999,
             odds:       matchOdds(name),
-            teeTime:    c.teeTime || c.status?.teeTime || null,
+            teeTime,
         };
     });
 }
@@ -451,6 +483,9 @@ function renderGolfLeaderboard() {
     );
     cutPlayers.sort((a, b) => (a.c.order || 0) - (b.c.order || 0));
 
+    const currentPeriod = Number(comp?.status?.period || 1);
+    const currentRoundIdx = Math.max(0, currentPeriod - 1);
+
     const renderRow = (competitor, posDisplay, cutRow) => {
         const a = competitor.athlete || {};
         const sc = competitor.score ?? '--';
@@ -458,7 +493,22 @@ function renderGolfLeaderboard() {
         const roundScores = [0, 1, 2, 3].map(j => formatRoundStrokes(ls[j]?.value));
         const today = cutRow ? '-' : getTodayDisplay(ls);
         const strokesTotal = cutRow ? '--' : formatStrokeTotal(ls);
-        const thru = cutRow ? 'CUT' : (competitor.status?.thru != null ? (competitor.status.thru === 18 ? 'F' : competitor.status.thru) : '--');
+
+        // THRU: ESPN nests hole-by-hole linescores inside the current round's linescore
+        let thru = '--';
+        if (cutRow) {
+            thru = 'CUT';
+        } else {
+            const roundData = ls[currentRoundIdx] || {};
+            const holeCount = (roundData.linescores || []).length;
+            if (holeCount > 0) {
+                thru = holeCount === 18 ? 'F' : holeCount;
+            } else if (roundData.value > 0) {
+                thru = 'F'; // round finished, hole data cleared
+            } else if (competitor.status?.thru != null) {
+                thru = competitor.status.thru === 18 ? 'F' : competitor.status.thru;
+            }
+        }
 
         return `<tr data-player="${(a.displayName || '').toLowerCase()}" class="${cutRow ? 'cut-player-row' : ''}">
             <td class="col-pos">${posDisplay}</td>
@@ -858,24 +908,42 @@ function isPlayerCut(playerId) {
     return inferCutFromRounds(p);
 }
 
+function formatShortAEST(isoOrDateStr) {
+    try {
+        const dt = new Date(isoOrDateStr);
+        if (isNaN(dt.getTime())) return null;
+        return dt.toLocaleString('en-AU', {
+            timeZone: 'Australia/Sydney',
+            hour: '2-digit', minute: '2-digit', hour12: true,
+        });
+    } catch { return null; }
+}
+
 function getPlayerThru(playerId) {
     const p = playerMap[playerId];
     if (!p) return '--';
     if (isPlayerCut(playerId)) return 'CUT';
-    const thru = p.status?.thru;
-    if (thru === 18) return 'F';
-    if (thru != null) return thru;
-    // Player hasn't started — show tee time if available
+
+    // 1. Nested hole linescores count (ESPN embeds per-hole data inside the round linescore)
+    if (p.thruCount > 0) return p.thruCount === 18 ? 'F' : p.thruCount;
+
+    // 2. Fallback: if the current round has a real value but no nested holes, round is finished
+    const comp = getCompetition();
+    const period = Number(comp?.status?.period || 1);
+    const currentRoundData = p.linescores?.[Math.max(0, period - 1)] || {};
+    if (currentRoundData.value > 0) return 'F';
+
+    // 3. Legacy: status.thru (may exist in some API versions)
+    const statusThru = p.status?.thru;
+    if (statusThru != null && !hasCutMarker(String(statusThru))) {
+        const n = Number(statusThru);
+        if (!isNaN(n)) return n === 18 ? 'F' : n;
+    }
+
+    // 4. Player hasn't started — show tee time (AEST) if available
     if (p.teeTime) {
-        try {
-            const dt = new Date(p.teeTime);
-            if (!isNaN(dt.getTime())) {
-                return dt.toLocaleString('en-AU', {
-                    timeZone: 'Australia/Sydney',
-                    hour: '2-digit', minute: '2-digit', hour12: true,
-                });
-            }
-        } catch { /* fall through */ }
+        const fmt = formatShortAEST(p.teeTime);
+        if (fmt) return fmt;
     }
     return '--';
 }
