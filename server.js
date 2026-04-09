@@ -45,11 +45,29 @@ function safeStateShape(state) {
 async function readState() {
   try {
     const raw = await fs.readFile(DATA_PATH, "utf8");
-    return safeStateShape(JSON.parse(raw));
+    const parsed = safeStateShape(JSON.parse(raw));
+    // If file exists but has no entries, fall through to seed check below
+    if (parsed.entries.length > 0) return parsed;
   } catch (error) {
-    if (error && error.code === "ENOENT") return { ...DEFAULT_STATE };
-    throw error;
+    if (error && error.code !== "ENOENT") throw error;
   }
+
+  // Seed from DATA_SEED env var if set (survives redeploys on Railway)
+  if (process.env.DATA_SEED) {
+    try {
+      const seeded = safeStateShape(JSON.parse(process.env.DATA_SEED));
+      if (seeded.entries.length > 0) {
+        // Persist it so subsequent reads are fast
+        await writeState(seeded);
+        console.log(`Seeded state from DATA_SEED env var (${seeded.entries.length} entries)`);
+        return seeded;
+      }
+    } catch (e) {
+      console.warn("DATA_SEED parse failed:", e.message);
+    }
+  }
+
+  return { ...DEFAULT_STATE };
 }
 
 async function writeState(state) {
