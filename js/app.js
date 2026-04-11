@@ -394,6 +394,26 @@ function isCutMade() {
     return false;
 }
 
+function getCutLineTotalStrokes() {
+    // Masters cut rule: top 50 + ties after Round 2.
+    // Returns the maximum R1+R2 stroke total that still makes the cut (inclusive).
+    // Players with a higher total than this missed the cut.
+    const comp = getCompetition();
+    if (!comp || !isCutMade()) return Infinity;
+    const strokeTotals = (comp.competitors || [])
+        .map(c => {
+            const r1 = c.linescores?.[0]?.value;
+            const r2 = c.linescores?.[1]?.value;
+            if (!r1 || !r2) return Infinity;
+            return r1 + r2;
+        })
+        .filter(s => s < Infinity)
+        .sort((a, b) => a - b);
+    if (!strokeTotals.length) return Infinity;
+    // Index 49 = the 50th best score; everyone tied at that total also makes the cut
+    return strokeTotals[Math.min(49, strokeTotals.length - 1)];
+}
+
 function getCompletedRounds() {
     // Estimate completed rounds from linescores that have values
     const comp = getCompetition();
@@ -903,10 +923,26 @@ function getPlayerScoreNum(playerId) {
 function isPlayerCut(playerId) {
     const p = playerMap[playerId];
     if (!p) return false;
+    // Explicit cut markers in the data (WD, DQ, etc.)
     if (hasCutMarker(p.score)) return true;
     if (hasCutMarker(p.status?.thru)) return true;
     const statusTexts = getStatusTextCandidates(p.status);
     if (statusTexts.some(hasCutMarker)) return true;
+    // Score-based cut detection: compare each player's R1+R2 stroke total to the cut line.
+    // The ESPN site API doesn't include explicit cut markers, so we derive it from scores.
+    // This works from between-rounds (period=2,state=post) through R3 and R4.
+    if (isCutMade()) {
+        const comp = getCompetition();
+        const c = (comp?.competitors || []).find(cx => cx.id === playerId);
+        if (c) {
+            const r1 = c.linescores?.[0]?.value;
+            const r2 = c.linescores?.[1]?.value;
+            if (r1 && r2) {
+                const cutLine = getCutLineTotalStrokes();
+                if (cutLine < Infinity && (r1 + r2) > cutLine) return true;
+            }
+        }
+    }
     return inferCutFromRounds(p);
 }
 
@@ -1414,19 +1450,21 @@ function getStatusTextCandidates(status) {
 }
 
 function inferCutFromRounds(player) {
+    // Fallback for R3/R4: if a player has no R3 score while others do, they missed the cut.
     const comp = getCompetition();
     if (!comp || !player) return false;
-
     const period = Number(comp?.status?.period || 0);
-    const detail = (comp?.status?.type?.detail || comp?.status?.type?.shortDetail || '').toUpperCase();
-
-    // ESPN site API often omits explicit "CUT" status. Once round 3 starts/completes,
-    // players who missed the cut usually only have 2 rounds of linescores.
-    const tournamentPastCut = period >= 3 || detail.includes('ROUND 3') || detail.includes('ROUND 4');
-    if (!tournamentPastCut) return false;
-
-    const roundsListed = Array.isArray(player.linescores) ? player.linescores.length : 0;
-    return roundsListed < 3;
+    if (period < 3) return false;
+    // Check if this player's R3 linescore has a real value
+    const r3 = player.linescores?.[2];
+    const hasR3Value = r3?.value != null && r3.value !== 0;
+    if (hasR3Value) return false; // playing R3 → not cut
+    // Only infer cut if at least some players have actual R3 data
+    const anyR3Active = (comp.competitors || []).some(c => {
+        const r = c.linescores?.[2];
+        return r?.value != null && r.value !== 0;
+    });
+    return anyR3Active;
 }
 
 function fmtScoreNum(n) {
