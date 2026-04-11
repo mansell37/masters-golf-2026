@@ -931,6 +931,8 @@ function isPlayerCut(playerId) {
     // Score-based cut detection: compare each player's R1+R2 stroke total to the cut line.
     // The ESPN site API doesn't include explicit cut markers, so we derive it from scores.
     // This works from between-rounds (period=2,state=post) through R3 and R4.
+    // IMPORTANT: when we have valid data, return the definitive result so inferCutFromRounds
+    // cannot incorrectly override it (e.g. players who made the cut but haven't teed off in R3).
     if (isCutMade()) {
         const comp = getCompetition();
         const c = (comp?.competitors || []).find(cx => cx.id === playerId);
@@ -939,7 +941,7 @@ function isPlayerCut(playerId) {
             const r2 = c.linescores?.[1]?.value;
             if (r1 && r2) {
                 const cutLine = getCutLineTotalStrokes();
-                if (cutLine < Infinity && (r1 + r2) > cutLine) return true;
+                if (cutLine < Infinity) return (r1 + r2) > cutLine; // definitive answer
             }
         }
     }
